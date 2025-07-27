@@ -4,7 +4,6 @@ Django settings for warehouse_system project.
 
 from pathlib import Path
 import os
-import dj_database_url
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -73,9 +72,19 @@ DATABASE_URL = config('DATABASE_URL', default=None)
 
 if DATABASE_URL:
     # Production database (PostgreSQL on Render)
-    DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL)
-    }
+    try:
+        import dj_database_url
+        DATABASES = {
+            'default': dj_database_url.parse(DATABASE_URL)
+        }
+    except ImportError:
+        # Fallback if dj_database_url is not available
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
 else:
     # Development database (SQLite)
     DATABASES = {
