@@ -1,0 +1,23 @@
+services:
+  # Web Service
+  - type: web
+    name: warehouse-management-web
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn warehouse_system.wsgi:application"
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.4
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: WEB_CONCURRENCY
+        value: 4
+
+  # PostgreSQL Database
+  - type: pserv
+    name: warehouse-management-db
+    env: docker
+    plan: free 
