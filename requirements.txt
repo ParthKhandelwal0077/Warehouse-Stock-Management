@@ -3,6 +3,7 @@ djangorestframework==3.14.0
 django-cors-headers==4.3.1
 python-decouple==3.8
 pytz==2023.3
+django-filter==23.3
 # Production dependencies for Render
 gunicorn==21.2.0
 psycopg2-binary==2.9.7
