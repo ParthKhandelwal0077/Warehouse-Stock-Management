@@ -1,0 +1,458 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports - Warehouse Inventory Management{% endblock %}
+
+{% block page_title %}Inventory Reports{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<!-- Report Type Selection -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Report Selection</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-outline-primary w-100 h-100" onclick="showCurrentInventoryReport()">
+                            <i class="bi bi-boxes fs-2 d-block mb-2"></i>
+                            <strong>Current Inventory</strong><br>
+                            <small>Stock levels and values</small>
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-outline-info w-100 h-100" onclick="showStockMovementReport()">
+                            <i class="bi bi-arrow-left-right fs-2 d-block mb-2"></i>
+                            <strong>Stock Movements</strong><br>
+                            <small>Transaction history</small>
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-outline-success w-100 h-100" onclick="showLowStockReport()">
+                            <i class="bi bi-exclamation-triangle fs-2 d-block mb-2"></i>
+                            <strong>Low Stock Alert</strong><br>
+                            <small>Products below minimum</small>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Current Inventory Report -->
+<div id="current-inventory-report" class="card mb-4" style="display: none;">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Current Inventory Report</h5>
+        <div>
+            <select class="form-select form-select-sm d-inline-block w-auto me-2" id="inventory-category-filter">
+                <option value="">All Categories</option>
+                <option value="RAW">Raw Material</option>
+                <option value="WIP">Work in Progress</option>
+                <option value="FIN">Finished Goods</option>
+                <option value="CON">Consumables</option>
+            </select>
+            <select class="form-select form-select-sm d-inline-block w-auto me-2" id="inventory-status-filter">
+                <option value="">All Stock Status</option>
+                <option value="LOW">Low Stock</option>
+                <option value="NORMAL">Normal</option>
+                <option value="HIGH">High Stock</option>
+            </select>
+            <button class="btn btn-sm btn-primary" onclick="loadCurrentInventoryReport()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+            </button>
+            <button class="btn btn-sm btn-success" onclick="exportInventoryReport()">
+                <i class="bi bi-download me-1"></i>Export
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Summary Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5 id="total-products-count">-</h5>
+                        <small class="text-muted">Total Products</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5 id="total-stock-value">-</h5>
+                        <small class="text-muted">Total Stock Value</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5 id="low-stock-products">-</h5>
+                        <small class="text-muted">Low Stock Products</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5 id="avg-stock-value">-</h5>
+                        <small class="text-muted">Avg Stock Value</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Inventory Table -->
+        <div class="table-responsive">
+            <table class="table table-dark table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th>Product Code</th>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Current Stock</th>
+                        <th>Min Level</th>
+                        <th>Max Level</th>
+                        <th>Unit Cost</th>
+                        <th>Stock Value</th>
+                        <th>Status</th>
+                        <th>Last Transaction</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-report-table">
+                    <tr>
+                        <td colspan="10" class="text-center">Click "Current Inventory" to load report</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Movement Report -->
+<div id="stock-movement-report" class="card mb-4" style="display: none;">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Stock Movement Report</h5>
+        <div>
+            <input type="date" class="form-control form-control-sm d-inline-block w-auto me-2" id="movement-start-date">
+            <input type="date" class="form-control form-control-sm d-inline-block w-auto me-2" id="movement-end-date">
+            <input type="text" class="form-control form-control-sm d-inline-block w-auto me-2" id="movement-product-filter" placeholder="Product Code">
+            <button class="btn btn-sm btn-primary" onclick="loadStockMovementReport()">
+                <i class="bi bi-search me-1"></i>Load Report
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Transaction ID</th>
+                        <th>Product</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Unit Cost</th>
+                        <th>Total Cost</th>
+                        <th>Vendor/Customer</th>
+                        <th>Reference</th>
+                    </tr>
+                </thead>
+                <tbody id="movement-report-table">
+                    <tr>
+                        <td colspan="9" class="text-center">Select date range and click "Load Report"</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Low Stock Report -->
+<div id="low-stock-report" class="card mb-4" style="display: none;">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Low Stock Alert Report</h5>
+        <button class="btn btn-sm btn-primary" onclick="loadLowStockReport()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning" role="alert" id="low-stock-summary" style="display: none;">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <span id="low-stock-summary-text"></span>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-dark table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th>Product Code</th>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Current Stock</th>
+                        <th>Minimum Level</th>
+                        <th>Shortage</th>
+                        <th>Last Transaction</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="low-stock-table">
+                    <tr>
+                        <td colspan="8" class="text-center">Click "Low Stock Alert" to load report</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default dates for movement report
+    const today = new Date();
+    const oneMonthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+    
+    document.getElementById('movement-end-date').value = today.toISOString().split('T')[0];
+    document.getElementById('movement-start-date').value = oneMonthAgo.toISOString().split('T')[0];
+});
+
+function showCurrentInventoryReport() {
+    hideAllReports();
+    document.getElementById('current-inventory-report').style.display = 'block';
+    loadCurrentInventoryReport();
+}
+
+function showStockMovementReport() {
+    hideAllReports();
+    document.getElementById('stock-movement-report').style.display = 'block';
+}
+
+function showLowStockReport() {
+    hideAllReports();
+    document.getElementById('low-stock-report').style.display = 'block';
+    loadLowStockReport();
+}
+
+function hideAllReports() {
+    document.getElementById('current-inventory-report').style.display = 'none';
+    document.getElementById('stock-movement-report').style.display = 'none';
+    document.getElementById('low-stock-report').style.display = 'none';
+}
+
+async function loadCurrentInventoryReport() {
+    try {
+        const params = new URLSearchParams();
+        
+        const category = document.getElementById('inventory-category-filter').value;
+        const status = document.getElementById('inventory-status-filter').value;
+        
+        if (category) params.append('category', category);
+        if (status) params.append('stock_status', status);
+        
+        const response = await axios.get(`reports/current_inventory/?${params}`);
+        const data = response.data;
+        
+        // Update summary stats
+        document.getElementById('total-products-count').textContent = data.total_products;
+        document.getElementById('total-stock-value').textContent = '$' + parseFloat(data.total_stock_value).toLocaleString();
+        document.getElementById('low-stock-products').textContent = data.low_stock_count;
+        
+        const avgValue = data.total_products > 0 ? data.total_stock_value / data.total_products : 0;
+        document.getElementById('avg-stock-value').textContent = '$' + parseFloat(avgValue).toFixed(2);
+        
+        // Display inventory table
+        displayInventoryTable(data.inventory);
+        
+    } catch (error) {
+        console.error('Error loading inventory report:', error);
+        document.getElementById('inventory-report-table').innerHTML = '<tr><td colspan="10" class="text-center text-danger">Error loading report</td></tr>';
+    }
+}
+
+function displayInventoryTable(inventory) {
+    const tableBody = document.getElementById('inventory-report-table');
+    
+    if (inventory.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No products found</td></tr>';
+        return;
+    }
+    
+    const html = inventory.map(item => `
+        <tr>
+            <td><strong>${item.product_code}</strong></td>
+            <td>${item.product_name}</td>
+            <td><span class="badge bg-secondary">${item.category}</span></td>
+            <td class="${getStockStatusClass(item.stock_status)}">${item.current_stock}</td>
+            <td>${item.minimum_stock_level}</td>
+            <td>${item.maximum_stock_level}</td>
+            <td>$${parseFloat(item.standard_cost).toFixed(2)}</td>
+            <td>$${parseFloat(item.stock_value).toFixed(2)}</td>
+            <td>
+                <span class="badge bg-${getStockStatusBadge(item.stock_status)}">
+                    ${item.stock_status}
+                </span>
+            </td>
+            <td>${item.last_transaction_date ? new Date(item.last_transaction_date).toLocaleDateString() : 'Never'}</td>
+        </tr>
+    `).join('');
+    
+    tableBody.innerHTML = html;
+}
+
+async function loadStockMovementReport() {
+    const startDate = document.getElementById('movement-start-date').value;
+    const endDate = document.getElementById('movement-end-date').value;
+    const productCode = document.getElementById('movement-product-filter').value;
+    
+    if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return;
+    }
+    
+    try {
+        const params = new URLSearchParams({
+            start_date: startDate,
+            end_date: endDate
+        });
+        
+        if (productCode) params.append('product_code', productCode);
+        
+        const response = await axios.get(`reports/stock_movement_report/?${params}`);
+        const data = response.data;
+        
+        displayMovementTable(data.movements);
+        
+    } catch (error) {
+        console.error('Error loading movement report:', error);
+        document.getElementById('movement-report-table').innerHTML = '<tr><td colspan="9" class="text-center text-danger">Error loading report</td></tr>';
+    }
+}
+
+function displayMovementTable(movements) {
+    const tableBody = document.getElementById('movement-report-table');
+    
+    if (movements.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No movements found for the selected criteria</td></tr>';
+        return;
+    }
+    
+    const html = movements.map(movement => `
+        <tr>
+            <td>${new Date(movement.transaction_date).toLocaleDateString()}</td>
+            <td>${movement.transaction_id}</td>
+            <td><strong>${movement.product_code}</strong><br><small>${movement.product_name}</small></td>
+            <td>
+                <span class="badge bg-${getTransactionTypeColor(movement.transaction_type)}">
+                    ${movement.transaction_type_display}
+                </span>
+            </td>
+            <td>${movement.quantity}</td>
+            <td>$${parseFloat(movement.unit_cost).toFixed(2)}</td>
+            <td>$${parseFloat(movement.total_cost).toFixed(2)}</td>
+            <td>${movement.vendor_customer || '-'}</td>
+            <td>${movement.reference_number || '-'}</td>
+        </tr>
+    `).join('');
+    
+    tableBody.innerHTML = html;
+}
+
+async function loadLowStockReport() {
+    try {
+        const response = await axios.get('products/low_stock_alert/');
+        const data = response.data;
+        
+        // Update summary
+        const summaryDiv = document.getElementById('low-stock-summary');
+        const summaryText = document.getElementById('low-stock-summary-text');
+        
+        if (data.count > 0) {
+            summaryDiv.style.display = 'block';
+            summaryText.textContent = `${data.count} product(s) are below minimum stock level and require immediate attention.`;
+        } else {
+            summaryDiv.style.display = 'none';
+        }
+        
+        // Display table
+        displayLowStockTable(data.products);
+        
+    } catch (error) {
+        console.error('Error loading low stock report:', error);
+        document.getElementById('low-stock-table').innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error loading report</td></tr>';
+    }
+}
+
+function displayLowStockTable(products) {
+    const tableBody = document.getElementById('low-stock-table');
+    
+    if (products.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="8" class="text-center text-success"><i class="bi bi-check-circle me-2"></i>All products are adequately stocked</td></tr>';
+        return;
+    }
+    
+    const html = products.map(product => `
+        <tr>
+            <td><strong>${product.product_code}</strong></td>
+            <td>${product.product_name}</td>
+            <td>-</td>
+            <td class="stock-low">${product.current_stock}</td>
+            <td>${product.minimum_stock_level}</td>
+            <td class="text-danger"><strong>${product.shortage}</strong></td>
+            <td>-</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="createStockInTransaction('${product.product_code}')">
+                    <i class="bi bi-plus-circle me-1"></i>Stock In
+                </button>
+            </td>
+        </tr>
+    `).join('');
+    
+    tableBody.innerHTML = html;
+}
+
+function exportInventoryReport() {
+    // For now, just show an alert
+    // In a full implementation, this would generate and download a CSV/Excel file
+    alert('Export functionality would be implemented here to generate CSV/Excel reports.');
+}
+
+function createStockInTransaction(productCode) {
+    // For now, just show an alert
+    // In a full implementation, this would redirect to transactions page with pre-filled data
+    alert(`Create stock in transaction for product ${productCode}. This would redirect to the transactions page with pre-filled product data.`);
+}
+
+function getStockStatusClass(status) {
+    switch(status) {
+        case 'LOW': return 'stock-low';
+        case 'HIGH': return 'stock-high';
+        default: return 'stock-normal';
+    }
+}
+
+function getStockStatusBadge(status) {
+    switch(status) {
+        case 'LOW': return 'danger';
+        case 'HIGH': return 'warning';
+        default: return 'success';
+    }
+}
+
+function getTransactionTypeColor(type) {
+    switch(type) {
+        case 'IN': return 'success';
+        case 'OUT': return 'danger';
+        case 'ADJ': return 'warning';
+        case 'TRF': return 'info';
+        default: return 'secondary';
+    }
+}
+</script>
+{% endblock %} 

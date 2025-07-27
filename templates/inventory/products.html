@@ -1,0 +1,468 @@
+{% extends 'base.html' %}
+
+{% block title %}Products - Warehouse Inventory Management{% endblock %}
+
+{% block page_title %}Product Management{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#productModal" onclick="openProductModal()">
+    <i class="bi bi-plus-circle me-2"></i>Add Product
+</button>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label for="categoryFilter" class="form-label">Category</label>
+                <select class="form-select" id="categoryFilter" onchange="loadProducts()">
+                    <option value="">All Categories</option>
+                    <option value="RAW">Raw Material</option>
+                    <option value="WIP">Work in Progress</option>
+                    <option value="FIN">Finished Goods</option>
+                    <option value="CON">Consumables</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="unitFilter" class="form-label">Unit</label>
+                <select class="form-select" id="unitFilter" onchange="loadProducts()">
+                    <option value="">All Units</option>
+                    <option value="PCS">Pieces</option>
+                    <option value="KG">Kilograms</option>
+                    <option value="LTR">Liters</option>
+                    <option value="MTR">Meters</option>
+                    <option value="BOX">Boxes</option>
+                    <option value="SET">Sets</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="searchFilter" class="form-label">Search</label>
+                <input type="text" class="form-control" id="searchFilter" placeholder="Search products..." onkeyup="debounceSearch()">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="statusFilter" class="form-label">Status</label>
+                <select class="form-select" id="statusFilter" onchange="loadProducts()">
+                    <option value="">All</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Products Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Products</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+                                    <table class="table table-dark table-hover">
+                <thead>
+                    <tr>
+                        <th>Product Code</th>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Unit</th>
+                        <th>Current Stock</th>
+                        <th>Min Level</th>
+                        <th>Standard Cost</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="products-table">
+                    <tr>
+                        <td colspan="9" class="text-center">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Products pagination">
+            <ul class="pagination justify-content-center" id="pagination">
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Product Modal -->
+<div class="modal fade" id="productModal" tabindex="-1" aria-labelledby="productModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="productModalLabel">Add Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="productForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="productCode" class="form-label">Product Code *</label>
+                            <input type="text" class="form-control" id="productCode" required>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="productName" class="form-label">Product Name *</label>
+                            <input type="text" class="form-control" id="productName" required>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="category" class="form-label">Category *</label>
+                            <select class="form-select" id="category" required>
+                                <option value="">Select Category</option>
+                                <option value="RAW">Raw Material</option>
+                                <option value="WIP">Work in Progress</option>
+                                <option value="FIN">Finished Goods</option>
+                                <option value="CON">Consumables</option>
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="unitOfMeasure" class="form-label">Unit of Measure *</label>
+                            <select class="form-select" id="unitOfMeasure" required>
+                                <option value="">Select Unit</option>
+                                <option value="PCS">Pieces</option>
+                                <option value="KG">Kilograms</option>
+                                <option value="LTR">Liters</option>
+                                <option value="MTR">Meters</option>
+                                <option value="BOX">Boxes</option>
+                                <option value="SET">Sets</option>
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="minimumStockLevel" class="form-label">Minimum Stock Level</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="minimumStockLevel" value="0">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="maximumStockLevel" class="form-label">Maximum Stock Level</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="maximumStockLevel" value="0">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="standardCost" class="form-label">Standard Cost</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="standardCost" value="0">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="isActive" checked>
+                        <label class="form-check-label" for="isActive">
+                            Active
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveProductBtn">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let editingProductId = null;
+let searchTimeout = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadProducts();
+});
+
+function debounceSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(loadProducts, 300);
+}
+
+async function loadProducts(page = 1) {
+    try {
+        const params = new URLSearchParams({
+            page: page,
+            page_size: 10
+        });
+        
+        // Add filters
+        const category = document.getElementById('categoryFilter').value;
+        const unit = document.getElementById('unitFilter').value;
+        const search = document.getElementById('searchFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        
+        if (category) params.append('category', category);
+        if (unit) params.append('unit_of_measure', unit);
+        if (search) params.append('search', search);
+        if (status !== '') params.append('is_active', status);
+        
+        const response = await axios.get(`products/?${params}`);
+        const data = response.data;
+        
+        displayProducts(data.results);
+        displayPagination(data, page);
+        
+    } catch (error) {
+        console.error('Error loading products:', error);
+        document.getElementById('products-table').innerHTML = '<tr><td colspan="9" class="text-center text-danger">Error loading products</td></tr>';
+    }
+}
+
+function displayProducts(products) {
+    const tableBody = document.getElementById('products-table');
+    
+    if (products.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No products found</td></tr>';
+        return;
+    }
+    
+    const html = products.map(product => `
+        <tr>
+            <td><strong>${product.product_code}</strong></td>
+            <td>${product.product_name}</td>
+            <td><span class="badge bg-secondary">${getCategoryDisplay(product.category)}</span></td>
+            <td>${getUnitDisplay(product.unit_of_measure)}</td>
+            <td class="${getStockClass(product.current_stock, product.minimum_stock_level)}">${product.current_stock}</td>
+            <td>${product.minimum_stock_level}</td>
+            <td>$${parseFloat(product.standard_cost).toFixed(2)}</td>
+            <td>
+                <span class="badge bg-${product.is_active ? 'success' : 'secondary'}">
+                    ${product.is_active ? 'Active' : 'Inactive'}
+                </span>
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button class="btn btn-outline-primary" onclick="editProduct(${product.id})" title="Edit">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-outline-info" onclick="viewStockMovements(${product.id})" title="Stock Movements">
+                        <i class="bi bi-clock-history"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="deleteProduct(${product.id})" title="Delete">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+    
+    tableBody.innerHTML = html;
+}
+
+function displayPagination(data, currentPage) {
+    const pagination = document.getElementById('pagination');
+    const totalPages = Math.ceil(data.count / 10);
+    
+    let html = '';
+    
+    // Previous button
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="loadProducts(${currentPage - 1})">Previous</a>
+    </li>`;
+    
+    // Page numbers
+    for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+        html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="loadProducts(${i})">${i}</a>
+        </li>`;
+    }
+    
+    // Next button
+    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="loadProducts(${currentPage + 1})">Next</a>
+    </li>`;
+    
+    pagination.innerHTML = html;
+}
+
+function openProductModal(productId = null) {
+    editingProductId = productId;
+    const modal = document.getElementById('productModal');
+    const modalTitle = document.getElementById('productModalLabel');
+    const form = document.getElementById('productForm');
+    
+    form.reset();
+    clearFormErrors();
+    
+    if (productId) {
+        modalTitle.textContent = 'Edit Product';
+        loadProductForEdit(productId);
+    } else {
+        modalTitle.textContent = 'Add Product';
+        document.getElementById('isActive').checked = true;
+    }
+}
+
+async function loadProductForEdit(productId) {
+    try {
+        const response = await axios.get(`products/${productId}/`);
+        const product = response.data;
+        
+        document.getElementById('productCode').value = product.product_code;
+        document.getElementById('productName').value = product.product_name;
+        document.getElementById('description').value = product.description || '';
+        document.getElementById('category').value = product.category;
+        document.getElementById('unitOfMeasure').value = product.unit_of_measure;
+        document.getElementById('minimumStockLevel').value = product.minimum_stock_level;
+        document.getElementById('maximumStockLevel').value = product.maximum_stock_level;
+        document.getElementById('standardCost').value = product.standard_cost;
+        document.getElementById('isActive').checked = product.is_active;
+        
+    } catch (error) {
+        console.error('Error loading product for edit:', error);
+        alert('Error loading product data');
+    }
+}
+
+document.getElementById('productForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        product_code: document.getElementById('productCode').value,
+        product_name: document.getElementById('productName').value,
+        description: document.getElementById('description').value,
+        category: document.getElementById('category').value,
+        unit_of_measure: document.getElementById('unitOfMeasure').value,
+        minimum_stock_level: parseFloat(document.getElementById('minimumStockLevel').value) || 0,
+        maximum_stock_level: parseFloat(document.getElementById('maximumStockLevel').value) || 0,
+        standard_cost: parseFloat(document.getElementById('standardCost').value) || 0,
+        is_active: document.getElementById('isActive').checked
+    };
+    
+    try {
+        if (editingProductId) {
+            await axios.put(`products/${editingProductId}/`, formData);
+        } else {
+            await axios.post('products/', formData);
+        }
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('productModal'));
+        modal.hide();
+        loadProducts();
+        
+    } catch (error) {
+        console.error('Error saving product:', error);
+        
+        if (error.response && error.response.data) {
+            displayFormErrors(error.response.data);
+        } else {
+            alert('Error saving product');
+        }
+    }
+});
+
+function displayFormErrors(errors) {
+    clearFormErrors();
+    
+    for (const [field, messages] of Object.entries(errors)) {
+        const input = document.getElementById(getFieldId(field));
+        if (input) {
+            input.classList.add('is-invalid');
+            const feedback = input.nextElementSibling;
+            if (feedback && feedback.classList.contains('invalid-feedback')) {
+                feedback.textContent = Array.isArray(messages) ? messages[0] : messages;
+            }
+        }
+    }
+}
+
+function clearFormErrors() {
+    const inputs = document.querySelectorAll('.form-control, .form-select');
+    inputs.forEach(input => {
+        input.classList.remove('is-invalid');
+        const feedback = input.nextElementSibling;
+        if (feedback && feedback.classList.contains('invalid-feedback')) {
+            feedback.textContent = '';
+        }
+    });
+}
+
+function getFieldId(field) {
+    const fieldMap = {
+        'product_code': 'productCode',
+        'product_name': 'productName',
+        'category': 'category',
+        'unit_of_measure': 'unitOfMeasure',
+        'minimum_stock_level': 'minimumStockLevel',
+        'maximum_stock_level': 'maximumStockLevel',
+        'standard_cost': 'standardCost'
+    };
+    return fieldMap[field] || field;
+}
+
+async function editProduct(productId) {
+    openProductModal(productId);
+    const modal = new bootstrap.Modal(document.getElementById('productModal'));
+    modal.show();
+}
+
+async function deleteProduct(productId) {
+    if (!confirm('Are you sure you want to delete this product?')) {
+        return;
+    }
+    
+    try {
+        await axios.delete(`products/${productId}/`);
+        loadProducts();
+    } catch (error) {
+        console.error('Error deleting product:', error);
+        alert('Error deleting product');
+    }
+}
+
+function viewStockMovements(productId) {
+    // For now, just show an alert
+    // In a full implementation, this would open a modal or redirect to a detailed view
+    alert(`Stock movements for product ID ${productId} would be displayed here.`);
+}
+
+function getCategoryDisplay(category) {
+    const categories = {
+        'RAW': 'Raw Material',
+        'WIP': 'Work in Progress',
+        'FIN': 'Finished Goods',
+        'CON': 'Consumables'
+    };
+    return categories[category] || category;
+}
+
+function getUnitDisplay(unit) {
+    const units = {
+        'PCS': 'Pieces',
+        'KG': 'Kilograms',
+        'LTR': 'Liters',
+        'MTR': 'Meters',
+        'BOX': 'Boxes',
+        'SET': 'Sets'
+    };
+    return units[unit] || unit;
+}
+
+function getStockClass(currentStock, minLevel) {
+    if (currentStock < minLevel) {
+        return 'stock-low';
+    }
+    return 'stock-normal';
+}
+</script>
+{% endblock %} 
