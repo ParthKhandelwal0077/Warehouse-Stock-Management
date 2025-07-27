@@ -1,8 +1,15 @@
+# PostgreSQL databases go in the 'databases' section
+databases:
+  - name: warehouse-management-db
+    databaseName: warehouse_db
+    user: warehouse_user
+    plan: free
+
+# Non-PostgreSQL services go in the 'services' section  
 services:
-  # Web Service
   - type: web
     name: warehouse-management-web
-    env: python
+    runtime: python
     buildCommand: "./build.sh"
     startCommand: "gunicorn warehouse_system.wsgi:application"
     plan: free
@@ -15,9 +22,7 @@ services:
         value: False
       - key: WEB_CONCURRENCY
         value: 4
-
-  # PostgreSQL Database
-  - type: pserv
-    name: warehouse-management-db
-    env: docker
-    plan: free 
+      - key: DATABASE_URL
+        fromDatabase:
+          name: warehouse-management-db
+          property: connectionString 
