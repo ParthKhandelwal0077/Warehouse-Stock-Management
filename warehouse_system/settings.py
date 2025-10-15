@@ -19,7 +19,9 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Add Azure Web Service domains for production
 if not DEBUG:
-    ALLOWED_HOSTS = ['*']  # Or specify your Azure Web Service URL
+    # Allow all hosts for now, but you should specify your actual Azure domain
+    ALLOWED_HOSTS = ['*']
+    # Example: ALLOWED_HOSTS = ['your-app-name.azurewebsites.net', 'localhost', '127.0.0.1']
 
 # Application definition
 INSTALLED_APPS = [
@@ -158,9 +160,10 @@ CORS_ALLOW_CREDENTIALS = True
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_REDIRECT_EXEMPT = []
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True 
+    # Temporarily disable HTTPS redirects for debugging
+    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    # SECURE_HSTS_SECONDS = 31536000
+    # SECURE_REDIRECT_EXEMPT = []
+    # SECURE_SSL_REDIRECT = True
+    # SESSION_COOKIE_SECURE = True
+    # CSRF_COOKIE_SECURE = True 
