@@ -14,4 +14,5 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
+# if debug is true it indicates the the development server will be serving static files from the static root directory but if false these url patterns are not used and the static files are served by the web server which in this case we are using whitenoise . Django in production don't serve static files due to performance reason
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) 

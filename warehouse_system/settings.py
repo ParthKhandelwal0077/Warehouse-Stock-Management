@@ -17,9 +17,9 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
-# Add render.com domains for production
+# Add Azure Web Service domains for production
 if not DEBUG:
-    ALLOWED_HOSTS = ['*']  # Or specify your Render app URL
+    ALLOWED_HOSTS = ['*']  # Or specify your Azure Web Service URL
 
 # Application definition
 INSTALLED_APPS = [
@@ -67,11 +67,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'warehouse_system.wsgi.application'
 
 # Database
-# Use PostgreSQL in production, SQLite in development
+# Use PostgreSQL in production (Azure Database), SQLite in development
 DATABASE_URL = config('DATABASE_URL', default=None)
 
 if DATABASE_URL:
-    # Production database (PostgreSQL on Render)
+    # Production database (PostgreSQL on Azure)
     try:
         import dj_database_url
         DATABASES = {
@@ -145,11 +145,11 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 
-# Add your Render app URL to CORS in production
+# Add your Azure Web Service URL to CORS in production
 if not DEBUG:
     CORS_ALLOWED_ORIGINS.extend([
-        # Add your Render app URL here after deployment
-        # "https://your-app-name.onrender.com",
+        # Add your Azure Web Service URL here after deployment
+        # "https://your-app-name.azurewebsites.net",
     ])
 
 CORS_ALLOW_CREDENTIALS = True
