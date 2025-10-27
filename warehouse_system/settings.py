@@ -17,11 +17,9 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
-# Add Azure Web Service domains for production
-if not DEBUG:
-    # Allow all hosts for now, but you should specify your actual Azure domain
-    ALLOWED_HOSTS = ['*']
-    # Example: ALLOWED_HOSTS = ['your-app-name.azurewebsites.net', 'localhost', '127.0.0.1']
+# Add render.com domains for production
+if not DEBUG :
+    ALLOWED_HOSTS = ['*']  # Or specify your Render app URL
 
 # Application definition
 INSTALLED_APPS = [
@@ -69,11 +67,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'warehouse_system.wsgi.application'
 
 # Database
-# Use PostgreSQL in production (Azure Database), SQLite in development
+# Use PostgreSQL in production, SQLite in development
 DATABASE_URL = config('DATABASE_URL', default=None)
 
 if DATABASE_URL:
-    # Production database (PostgreSQL on Azure)
+    # Production database (PostgreSQL on Render)
     try:
         import dj_database_url
         DATABASES = {
@@ -147,11 +145,11 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 
-# Add your Azure Web Service URL to CORS in production
+# Add your Render app URL to CORS in production
 if not DEBUG:
     CORS_ALLOWED_ORIGINS.extend([
-        # Add your Azure Web Service URL here after deployment
-        # "https://your-app-name.azurewebsites.net",
+        # Add your Render app URL here after deployment
+        # "https://your-app-name.onrender.com",
     ])
 
 CORS_ALLOW_CREDENTIALS = True
@@ -160,10 +158,9 @@ CORS_ALLOW_CREDENTIALS = True
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    # Temporarily disable HTTPS redirects for debugging
-    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    # SECURE_HSTS_SECONDS = 31536000
-    # SECURE_REDIRECT_EXEMPT = []
-    # SECURE_SSL_REDIRECT = True
-    # SESSION_COOKIE_SECURE = True
-    # CSRF_COOKIE_SECURE = True 
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_REDIRECT_EXEMPT = []
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True 

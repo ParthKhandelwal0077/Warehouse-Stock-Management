@@ -1,0 +1,34 @@
+# PostgreSQL databases go in the 'databases' section
+databases:
+  - name: warehouse-management-db
+    databaseName: warehouse_db
+    user: warehouse_user
+    plan: free
+
+# Non-PostgreSQL services go in the 'services' section  
+services:
+  - type: web
+    name: warehouse-management-web
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn warehouse_system.wsgi:application"
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.4
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: WEB_CONCURRENCY
+        value: 4
+      - key: DATABASE_URL
+        fromDatabase:
+          name: warehouse-management-db
+          property: connectionString
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        value: admin123
+      - key: ADMIN_EMAIL
+        value: admin@warehouse.com 
